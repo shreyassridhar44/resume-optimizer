@@ -21,11 +21,21 @@ export interface RewrittenBullet {
   improved: string
 }
 
+export interface JDIntelligence {
+  role_summary: string
+  required_skills: string[]
+  nice_to_have_skills: string[]
+  experience_level: string
+  key_responsibilities: string[]
+  education: string
+}
+
 export interface AnalysisResult {
   analysis_id: string
   ats: ATSResult
   recruiter: RecruiterFeedback
   rewritten_bullets: RewrittenBullet[]
+  jd_intelligence?: JDIntelligence | null
   created_at: string
 }
 

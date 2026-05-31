@@ -85,6 +85,7 @@ async def save_analysis(
     ats_data: dict,
     recruiter_data: dict,
     rewritten_bullets: list,
+    jd_intelligence: Optional[dict] = None,
 ) -> str:
     """Save full analysis result to database."""
     supabase = get_supabase()
@@ -122,6 +123,7 @@ async def save_analysis(
             "weaknesses": recruiter_data.get("weaknesses", []),
             "rewritten_points": rewritten_bullets,
             "persona": recruiter_data.get("persona", "standard"),
+            "jd_intelligence": jd_intelligence or {},
             "created_at": datetime.utcnow().isoformat(),
         }).execute()
         

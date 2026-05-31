@@ -57,11 +57,13 @@ create table if not exists public.feedback (
   weaknesses       jsonb default '[]'::jsonb,
   rewritten_points jsonb default '[]'::jsonb,
   persona          text default 'standard',
+  jd_intelligence  jsonb default '{}'::jsonb,
   created_at       timestamptz default now()
 );
 
--- If upgrading an existing database, add the persona column:
+-- If upgrading an existing database, add the new columns:
 alter table public.feedback add column if not exists persona text default 'standard';
+alter table public.feedback add column if not exists jd_intelligence jsonb default '{}'::jsonb;
 
 create index on public.feedback(analysis_id);
 

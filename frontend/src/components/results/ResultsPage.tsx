@@ -5,6 +5,7 @@ import { getAnalysis } from '../../services/api'
 import type { AnalysisResult } from '../../types'
 import ScoreRing from '../ui/ScoreRing'
 import CoverLetterCard from './CoverLetterCard'
+import JDIntelligenceCard from './JDIntelligenceCard'
 import { downloadAnalysisPDF } from '../../services/pdfExport'
 import {
   CheckCircle2, XCircle, Lightbulb, ArrowLeft,
@@ -114,6 +115,7 @@ export default function ResultsPage() {
   }
 
   const { ats, recruiter, rewritten_bullets } = data
+  const jdIntel = data.jd_intelligence
   const visibleMissing = showAllKeywords ? ats.missing_keywords : ats.missing_keywords.slice(0, 12)
   const visibleBullets = showAllBullets ? rewritten_bullets : rewritten_bullets.slice(0, 3)
 
@@ -176,6 +178,9 @@ export default function ResultsPage() {
           </div>
         </div>
       </div>
+
+      {/* JD Intelligence */}
+      {jdIntel && <JDIntelligenceCard data={jdIntel} />}
 
       {/* Missing keywords */}
       {ats.missing_keywords.length > 0 && (

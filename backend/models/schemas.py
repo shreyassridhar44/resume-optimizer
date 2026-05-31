@@ -54,6 +54,15 @@ class RecruiterFeedback(BaseModel):
     persona: Optional[str] = "standard"
 
 
+class JDIntelligence(BaseModel):
+    role_summary: str = ""
+    required_skills: List[str] = []
+    nice_to_have_skills: List[str] = []
+    experience_level: str = ""
+    key_responsibilities: List[str] = []
+    education: str = ""
+
+
 class RewrittenBullet(BaseModel):
     original: str
     improved: str
@@ -64,6 +73,7 @@ class AnalysisResult(BaseModel):
     ats: ATSResult
     recruiter: RecruiterFeedback
     rewritten_bullets: List[RewrittenBullet]
+    jd_intelligence: Optional[JDIntelligence] = None
     created_at: str
 
 
@@ -122,4 +132,5 @@ class AnalysisDetailResponse(BaseModel):
     ats: ATSResult
     recruiter: RecruiterFeedback
     rewritten_bullets: List[RewrittenBullet]
+    jd_intelligence: Optional[JDIntelligence] = None
     created_at: str

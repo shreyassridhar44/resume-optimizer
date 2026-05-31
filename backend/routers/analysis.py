@@ -9,6 +9,7 @@ from models.schemas import (
 from services.ats_engine import compute_ats_score
 from services.gemini_service import (
     simulate_recruiter, rewrite_bullet_points, generate_cover_letter,
+    extract_jd_intelligence,
 )
 from services.parser import parse_resume_sections
 from services.storage import get_resume_text, save_analysis, get_analysis_by_id
@@ -45,8 +46,13 @@ async def analyze_resume(req: AnalyzeRequest):
             req.persona or "standard",
         )
     )
-    
-    ats_result, recruiter_feedback = await asyncio.gather(ats_task, recruiter_task)
+    jd_intel_task = asyncio.create_task(
+        extract_jd_intelligence(req.job_description)
+    )
+
+    ats_result, recruiter_feedback, jd_intelligence = await asyncio.gather(
+        ats_task, recruiter_task, jd_intel_task
+    )
     
     # Rewrite top bullet points
     bullets_to_rewrite = parsed.bullet_points[:8]  # Top 8 bullets
@@ -62,6 +68,7 @@ async def analyze_resume(req: AnalyzeRequest):
         ats_data=ats_result.model_dump(),
         recruiter_data=recruiter_feedback.model_dump(),
         rewritten_bullets=[r.model_dump() for r in rewritten],
+        jd_intelligence=jd_intelligence.model_dump(),
     )
     
     return AnalysisResponse(
@@ -70,6 +77,7 @@ async def analyze_resume(req: AnalyzeRequest):
             ats=ats_result,
             recruiter=recruiter_feedback,
             rewritten_bullets=rewritten,
+            jd_intelligence=jd_intelligence,
             created_at=datetime.utcnow().isoformat(),
         )
     )
@@ -152,5 +160,6 @@ async def get_analysis(analysis_id: str, user_id: str):
             "persona": feedback.get("persona", "standard"),
         },
         "rewritten_bullets": feedback.get("rewritten_points", []),
+        "jd_intelligence": feedback.get("jd_intelligence") or None,
         "created_at": analysis.get("created_at", ""),
     }

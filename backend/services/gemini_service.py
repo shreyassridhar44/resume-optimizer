@@ -3,7 +3,7 @@ import re
 from typing import List
 from groq import Groq
 from core.config import settings
-from models.schemas import RecruiterFeedback, RewrittenBullet
+from models.schemas import RecruiterFeedback, RewrittenBullet, JDIntelligence
 ROLE_CONTEXT = {
     "sde": "Software Development Engineer (SDE) role focusing on system design, coding, and software architecture",
     "ml": "Machine Learning Engineer role focusing on ML systems, model development, and data pipelines",
@@ -289,3 +289,57 @@ Requirements for the cover letter:
     except Exception as e:
         print(f"❌ Groq cover letter generation failed: {type(e).__name__}: {e}")
         raise
+
+
+# ── JD Intelligence Extractor ────────────────────────────────────────────────
+
+async def extract_jd_intelligence(jd_text: str) -> JDIntelligence:
+    """Parse a job description into structured intelligence using Groq."""
+    prompt = f"""You are an expert technical recruiter and job-description analyst.
+
+Read the job description below and extract structured intelligence from it.
+Only include information that is actually present or strongly implied — do not invent.
+
+## JOB DESCRIPTION:
+{jd_text[:3500]}
+
+Respond with ONLY a valid JSON object. No markdown, no explanation, just raw JSON:
+{{
+  "role_summary": "<1-2 sentence summary of what this role is>",
+  "required_skills": [<must-have skills/technologies, 5-12 items>],
+  "nice_to_have_skills": [<preferred/bonus skills, 0-8 items>],
+  "experience_level": "<e.g. 'Entry-level (0-2 yrs)', 'Mid (3-5 yrs)', 'Senior (5+ yrs)'>",
+  "key_responsibilities": [<3-6 core responsibilities as short phrases>],
+  "education": "<degree/education requirement if stated, else empty string>"
+}}"""
+
+    try:
+        client = get_client()
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.2,
+            max_tokens=1024,
+        )
+        raw = response.choices[0].message.content or ""
+        print("✅ Groq JD intelligence extracted")
+        data = _extract_json(raw)
+
+        return JDIntelligence(
+            role_summary=str(data.get("role_summary", "")).strip(),
+            required_skills=[str(s).strip() for s in data.get("required_skills", [])][:12],
+            nice_to_have_skills=[str(s).strip() for s in data.get("nice_to_have_skills", [])][:8],
+            experience_level=str(data.get("experience_level", "")).strip(),
+            key_responsibilities=[str(s).strip() for s in data.get("key_responsibilities", [])][:6],
+            education=str(data.get("education", "")).strip(),
+        )
+    except Exception as e:
+        print(f"❌ Groq JD intelligence extraction failed: {type(e).__name__}: {e}")
+        return JDIntelligence(
+            role_summary="",
+            required_skills=[],
+            nice_to_have_skills=[],
+            experience_level="",
+            key_responsibilities=[],
+            education="",
+        )
