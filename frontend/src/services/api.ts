@@ -3,6 +3,7 @@ import type {
   AnalysisResponse,
   HistoryResponse,
   RoleType,
+  PersonaType,
 } from '../types'
 
 const BASE_URL = import.meta.env.VITE_API_URL || '/api'
@@ -45,6 +46,7 @@ export async function analyzeResume(params: {
   jobDescription: string
   userId: string
   roleType: RoleType
+  persona: PersonaType
 }): Promise<AnalysisResponse> {
   const res = await fetch(`${BASE_URL}/analyze`, {
     method: 'POST',
@@ -54,6 +56,7 @@ export async function analyzeResume(params: {
       job_description: params.jobDescription,
       user_id: params.userId,
       role_type: params.roleType,
+      persona: params.persona,
     }),
   })
   return handleResponse<AnalysisResponse>(res)

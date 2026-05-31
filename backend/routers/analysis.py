@@ -35,7 +35,12 @@ async def analyze_resume(req: AnalyzeRequest):
         asyncio.to_thread(compute_ats_score, resume_text, req.job_description)
     )
     recruiter_task = asyncio.create_task(
-        simulate_recruiter(resume_text, req.job_description, req.role_type or "general")
+        simulate_recruiter(
+            resume_text,
+            req.job_description,
+            req.role_type or "general",
+            req.persona or "standard",
+        )
     )
     
     ats_result, recruiter_feedback = await asyncio.gather(ats_task, recruiter_task)
@@ -106,6 +111,7 @@ async def get_analysis(analysis_id: str, user_id: str):
             "strengths": feedback.get("strengths", []),
             "weaknesses": feedback.get("weaknesses", []),
             "suggestions": feedback.get("suggestions", []),
+            "persona": feedback.get("persona", "standard"),
         },
         "rewritten_bullets": feedback.get("rewritten_points", []),
         "created_at": analysis.get("created_at", ""),

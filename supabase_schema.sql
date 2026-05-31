@@ -56,8 +56,12 @@ create table if not exists public.feedback (
   strengths        jsonb default '[]'::jsonb,
   weaknesses       jsonb default '[]'::jsonb,
   rewritten_points jsonb default '[]'::jsonb,
+  persona          text default 'standard',
   created_at       timestamptz default now()
 );
+
+-- If upgrading an existing database, add the persona column:
+alter table public.feedback add column if not exists persona text default 'standard';
 
 create index on public.feedback(analysis_id);
 

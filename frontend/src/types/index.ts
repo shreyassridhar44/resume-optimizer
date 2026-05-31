@@ -13,6 +13,7 @@ export interface RecruiterFeedback {
   strengths: string[]
   weaknesses: string[]
   suggestions: string[]
+  persona?: PersonaType
 }
 
 export interface RewrittenBullet {
@@ -62,10 +63,13 @@ export interface HistoryResponse {
 
 export type RoleType = 'general' | 'sde' | 'ml' | 'analyst'
 
+export type PersonaType = 'standard' | 'faang' | 'startup' | 'hr'
+
 export interface AnalyzeFormState {
   resumeId: string | null
   jobDescription: string
   roleType: RoleType
+  persona: PersonaType
   file: File | null
 }
 

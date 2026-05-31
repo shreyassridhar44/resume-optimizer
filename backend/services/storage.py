@@ -121,6 +121,7 @@ async def save_analysis(
             "strengths": recruiter_data.get("strengths", []),
             "weaknesses": recruiter_data.get("weaknesses", []),
             "rewritten_points": rewritten_bullets,
+            "persona": recruiter_data.get("persona", "standard"),
             "created_at": datetime.utcnow().isoformat(),
         }).execute()
         

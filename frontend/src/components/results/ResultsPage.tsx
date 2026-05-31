@@ -11,6 +11,13 @@ import {
   Download,
 } from 'lucide-react'
 
+const PERSONA_LABELS: Record<string, string> = {
+  standard: 'Standard Recruiter',
+  faang: 'FAANG Recruiter',
+  startup: 'Startup Recruiter',
+  hr: 'HR Recruiter',
+}
+
 function ATSBar({ score }: { score: number }) {
   const color = score >= 70 ? '#a3ff47' : score >= 45 ? '#47c8ff' : '#ff6b47'
   return (
@@ -125,9 +132,17 @@ export default function ResultsPage() {
       {/* Header */}
       <div className="mb-10">
         <h1 className="font-display text-3xl font-bold text-white mb-1">Your Results</h1>
-        <p className="text-ink-500 text-xs font-mono">
-          {new Date(data.created_at).toLocaleString()}
-        </p>
+        <div className="flex items-center gap-3 flex-wrap">
+          <p className="text-ink-500 text-xs font-mono">
+            {new Date(data.created_at).toLocaleString()}
+          </p>
+          {recruiter.persona && (
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-mono px-2.5 py-1 rounded-full bg-acid/10 border border-acid/30 text-acid">
+              <Sparkles size={11} />
+              {PERSONA_LABELS[recruiter.persona] ?? 'Recruiter'} lens
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Score overview */}

@@ -35,6 +35,7 @@ class AnalyzeRequest(BaseModel):
     job_description: str
     user_id: str
     role_type: Optional[str] = "general"  # sde | ml | analyst | general
+    persona: Optional[str] = "standard"  # standard | faang | startup | hr
 
 
 class ATSResult(BaseModel):
@@ -50,6 +51,7 @@ class RecruiterFeedback(BaseModel):
     strengths: List[str]
     weaknesses: List[str]
     suggestions: List[str]
+    persona: Optional[str] = "standard"
 
 
 class RewrittenBullet(BaseModel):
