@@ -83,6 +83,22 @@ class RewriteResponse(BaseModel):
     rewritten: List[RewrittenBullet]
 
 
+# ── Cover Letter ─────────────────────────────────────────────────────────────
+
+class CoverLetterRequest(BaseModel):
+    analysis_id: str
+    user_id: str
+    tone: Optional[str] = "professional"  # professional | enthusiastic | concise
+    applicant_name: Optional[str] = ""
+    company_name: Optional[str] = ""
+    role_title: Optional[str] = ""
+
+
+class CoverLetterResponse(BaseModel):
+    cover_letter: str
+    tone: str
+
+
 # ── History ──────────────────────────────────────────────────────────────────
 
 class HistoryItem(BaseModel):

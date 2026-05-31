@@ -4,6 +4,8 @@ import type {
   HistoryResponse,
   RoleType,
   PersonaType,
+  CoverLetterTone,
+  CoverLetterResponse,
 } from '../types'
 
 const BASE_URL = import.meta.env.VITE_API_URL || '/api'
@@ -70,6 +72,31 @@ export async function getAnalysis(
     `${BASE_URL}/analysis/${analysisId}?user_id=${userId}`
   )
   return handleResponse<AnalysisResponse['data']>(res)
+}
+
+// ── Cover Letter ────────────────────────────────────────────────────────────
+
+export async function generateCoverLetter(params: {
+  analysisId: string
+  userId: string
+  tone: CoverLetterTone
+  applicantName?: string
+  companyName?: string
+  roleTitle?: string
+}): Promise<CoverLetterResponse> {
+  const res = await fetch(`${BASE_URL}/cover-letter`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      analysis_id: params.analysisId,
+      user_id: params.userId,
+      tone: params.tone,
+      applicant_name: params.applicantName ?? '',
+      company_name: params.companyName ?? '',
+      role_title: params.roleTitle ?? '',
+    }),
+  })
+  return handleResponse<CoverLetterResponse>(res)
 }
 
 // ── History ───────────────────────────────────────────────────────────────────

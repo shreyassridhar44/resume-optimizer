@@ -65,6 +65,13 @@ export type RoleType = 'general' | 'sde' | 'ml' | 'analyst'
 
 export type PersonaType = 'standard' | 'faang' | 'startup' | 'hr'
 
+export type CoverLetterTone = 'professional' | 'enthusiastic' | 'concise'
+
+export interface CoverLetterResponse {
+  cover_letter: string
+  tone: CoverLetterTone
+}
+
 export interface AnalyzeFormState {
   resumeId: string | null
   jobDescription: string

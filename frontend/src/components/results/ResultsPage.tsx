@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { getAnalysis } from '../../services/api'
 import type { AnalysisResult } from '../../types'
 import ScoreRing from '../ui/ScoreRing'
+import CoverLetterCard from './CoverLetterCard'
 import { downloadAnalysisPDF } from '../../services/pdfExport'
 import {
   CheckCircle2, XCircle, Lightbulb, ArrowLeft,
@@ -276,6 +277,9 @@ export default function ResultsPage() {
           )}
         </div>
       )}
+
+      {/* Cover Letter Generator */}
+      {analysisId && <CoverLetterCard analysisId={analysisId} />}
 
       {/* CTA */}
       <div className="mt-10 flex gap-4 flex-wrap">

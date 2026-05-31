@@ -3,10 +3,13 @@ from fastapi import APIRouter, HTTPException
 from models.schemas import (
     AnalyzeRequest, AnalysisResponse, AnalysisResult,
     RewriteRequest, RewriteResponse,
+    CoverLetterRequest, CoverLetterResponse,
     ATSResult, RecruiterFeedback,
 )
 from services.ats_engine import compute_ats_score
-from services.gemini_service import simulate_recruiter, rewrite_bullet_points
+from services.gemini_service import (
+    simulate_recruiter, rewrite_bullet_points, generate_cover_letter,
+)
 from services.parser import parse_resume_sections
 from services.storage import get_resume_text, save_analysis, get_analysis_by_id
 from datetime import datetime
@@ -83,6 +86,41 @@ async def rewrite_bullets(req: RewriteRequest):
     
     rewritten = await rewrite_bullet_points(req.bullet_points, req.job_context or "")
     return RewriteResponse(rewritten=rewritten)
+
+
+@router.post("/cover-letter", response_model=CoverLetterResponse)
+async def create_cover_letter(req: CoverLetterRequest):
+    """Generate a tailored cover letter from a stored analysis (resume + job description)."""
+    result = await get_analysis_by_id(req.analysis_id, req.user_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+
+    analysis = result["analysis"]
+    resume_text = (analysis.get("resumes") or {}).get("parsed_text", "")
+    jd_text = (analysis.get("job_descriptions") or {}).get("content", "")
+
+    if not resume_text or not jd_text:
+        raise HTTPException(
+            status_code=422,
+            detail="Could not load resume or job description for this analysis.",
+        )
+
+    try:
+        letter = await generate_cover_letter(
+            resume_text=resume_text,
+            jd_text=jd_text,
+            tone=req.tone or "professional",
+            applicant_name=req.applicant_name or "",
+            company_name=req.company_name or "",
+            role_title=req.role_title or "",
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=502,
+            detail="Cover letter generation failed. Please try again.",
+        )
+
+    return CoverLetterResponse(cover_letter=letter, tone=req.tone or "professional")
 
 
 @router.get("/analysis/{analysis_id}")

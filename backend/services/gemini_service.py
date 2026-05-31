@@ -4,7 +4,6 @@ from typing import List
 from groq import Groq
 from core.config import settings
 from models.schemas import RecruiterFeedback, RewrittenBullet
-
 ROLE_CONTEXT = {
     "sde": "Software Development Engineer (SDE) role focusing on system design, coding, and software architecture",
     "ml": "Machine Learning Engineer role focusing on ML systems, model development, and data pipelines",
@@ -220,3 +219,73 @@ Respond ONLY with valid JSON — no markdown, no explanation:
     except Exception as e:
         print(f"❌ Groq rewrite failed: {type(e).__name__}: {e}")
         return [RewrittenBullet(original=b, improved=b) for b in bullets]
+
+
+# ── Cover Letter ─────────────────────────────────────────────────────────────
+
+COVER_LETTER_TONE = {
+    "professional": "polished, formal, and confident — suitable for corporate and traditional roles",
+    "enthusiastic": "warm, energetic, and passionate while staying professional — great for startups and mission-driven teams",
+    "concise": "tight and to-the-point, no filler, every sentence earns its place — for busy hiring managers",
+}
+
+
+async def generate_cover_letter(
+    resume_text: str,
+    jd_text: str,
+    tone: str = "professional",
+    applicant_name: str = "",
+    company_name: str = "",
+    role_title: str = "",
+) -> str:
+    """Generate a tailored cover letter from a resume + job description using Groq."""
+    tone_desc = COVER_LETTER_TONE.get(tone, COVER_LETTER_TONE["professional"])
+
+    name_line = applicant_name.strip() or "the applicant"
+    company_line = company_name.strip() or "the company"
+    role_line = role_title.strip() or "the role described in the job description"
+
+    prompt = f"""You are an expert career coach and professional cover letter writer.
+
+Write a tailored, one-page cover letter for {name_line}, applying for {role_line} at {company_line}.
+
+Use a {tone_desc} tone.
+
+Ground every claim in the candidate's ACTUAL resume below — do NOT invent experience,
+employers, degrees, or metrics that are not present. Pull the most relevant achievements
+and skills that match the job description, and connect them explicitly to what the role needs.
+
+## JOB DESCRIPTION:
+{jd_text[:3000]}
+
+## CANDIDATE RESUME:
+{resume_text[:3000]}
+
+Requirements for the cover letter:
+- 3 to 4 short paragraphs, no more than ~320 words total
+- Open with a strong hook that names the role and shows genuine fit
+- Middle paragraph(s): 2-3 concrete, relevant achievements tied to the job's needs
+- Close with a confident call to action
+- Use "{applicant_name}" as the sign-off name if provided, otherwise end with "Sincerely," on its own line
+- Do NOT use placeholders like [Your Name] or [Address]; if a detail is unknown, omit it gracefully
+- Output ONLY the cover letter body text. No preamble, no markdown headers, no explanation."""
+
+    try:
+        client = get_client()
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.6,
+            max_tokens=1024,
+        )
+        letter = (response.choices[0].message.content or "").strip()
+        # Strip any accidental markdown code fences
+        letter = re.sub(r"^```(?:\w+)?\n?", "", letter)
+        letter = re.sub(r"\n?```$", "", letter).strip()
+        print(f"✅ Groq cover letter generated (tone={tone})")
+        if not letter:
+            raise ValueError("Empty cover letter returned")
+        return letter
+    except Exception as e:
+        print(f"❌ Groq cover letter generation failed: {type(e).__name__}: {e}")
+        raise
