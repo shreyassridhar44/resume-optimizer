@@ -90,12 +90,28 @@ class AnalysisResult(BaseModel):
     rewritten_bullets: List[RewrittenBullet]
     jd_intelligence: Optional[JDIntelligence] = None
     strength_breakdown: Optional[StrengthBreakdown] = None
+    semantic_match: Optional["SemanticMatch"] = None
     created_at: str
 
 
 class AnalysisResponse(BaseModel):
     success: bool = True
     data: AnalysisResult
+
+
+# ── Semantic Matching ────────────────────────────────────────────────────────
+
+class SemanticMatch(BaseModel):
+    score: float = Field(..., ge=0, le=100, description="Semantic similarity score 0-100")
+    interpretation: str = ""
+    embedding_dimensions: int = 128
+    raw_similarity: float = Field(0.0, ge=0, le=1)
+    keyword_score: float = 0.0  # ATS score for comparison
+    score_difference: float = 0.0  # Semantic - Keyword
+
+
+class SemanticMatchResponse(BaseModel):
+    semantic_match: SemanticMatch
 
 
 # ── Rewrite ──────────────────────────────────────────────────────────────────

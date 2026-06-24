@@ -10,6 +10,7 @@ import SkillGapCard from './SkillGapCard'
 import StrengthBreakdownCard from './StrengthBreakdownCard'
 import RedFlagCard from './RedFlagCard'
 import EvolutionCard from './EvolutionCard'
+import SemanticMatchCard from './SemanticMatchCard'
 import { downloadAnalysisPDF } from '../../services/pdfExport'
 import {
   CheckCircle2, XCircle, Lightbulb, ArrowLeft,
@@ -134,6 +135,7 @@ export default function ResultsPage() {
   const { ats, recruiter, rewritten_bullets } = data
   const jdIntel = data.jd_intelligence
   const strength = data.strength_breakdown
+  const semanticMatch = data.semantic_match
   const visibleMissing = showAllKeywords ? ats.missing_keywords : ats.missing_keywords.slice(0, 12)
   const visibleBullets = showAllBullets ? rewritten_bullets : rewritten_bullets.slice(0, 3)
 
@@ -202,6 +204,9 @@ export default function ResultsPage() {
 
       {/* Resume Strength Breakdown */}
       {strength && <StrengthBreakdownCard data={strength} />}
+
+      {/* Semantic Matching */}
+      {semanticMatch && <SemanticMatchCard data={semanticMatch} />}
 
       {/* Red Flag Detector */}
       {resumeText && <RedFlagCard resumeText={resumeText} />}

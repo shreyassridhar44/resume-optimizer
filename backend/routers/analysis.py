@@ -14,6 +14,7 @@ from services.gemini_service import (
     simulate_recruiter, rewrite_bullet_points, generate_cover_letter,
     extract_jd_intelligence, generate_skill_gap_roadmap, analyze_strength_breakdown,
 )
+from services.embeddings import compute_semantic_similarity
 from services.parser import parse_resume_sections
 from services.storage import get_resume_text, save_analysis, get_analysis_by_id
 from datetime import datetime
@@ -55,14 +56,28 @@ async def analyze_resume(req: AnalyzeRequest):
     strength_task = asyncio.create_task(
         analyze_strength_breakdown(resume_text, req.job_description)
     )
+    semantic_task = asyncio.create_task(
+        compute_semantic_similarity(resume_text, req.job_description)
+    )
 
-    ats_result, recruiter_feedback, jd_intelligence, strength_breakdown = await asyncio.gather(
-        ats_task, recruiter_task, jd_intel_task, strength_task
+    ats_result, recruiter_feedback, jd_intelligence, strength_breakdown, (semantic_score, semantic_meta) = await asyncio.gather(
+        ats_task, recruiter_task, jd_intel_task, strength_task, semantic_task
     )
     
     # Rewrite top bullet points
     bullets_to_rewrite = parsed.bullet_points[:8]  # Top 8 bullets
     rewritten = await rewrite_bullet_points(bullets_to_rewrite, req.job_description[:500])
+    
+    # Build semantic match result
+    from models.schemas import SemanticMatch
+    semantic_match = SemanticMatch(
+        score=semantic_score,
+        interpretation=semantic_meta.get("interpretation", ""),
+        embedding_dimensions=semantic_meta.get("embedding_dimensions", 128),
+        raw_similarity=semantic_meta.get("raw_similarity", 0.0),
+        keyword_score=ats_result.score,
+        score_difference=round(semantic_score - ats_result.score, 1),
+    )
     
     # Save to DB
     analysis_id = await save_analysis(
@@ -86,6 +101,7 @@ async def analyze_resume(req: AnalyzeRequest):
             rewritten_bullets=rewritten,
             jd_intelligence=jd_intelligence,
             strength_breakdown=strength_breakdown,
+            semantic_match=semantic_match,
             created_at=datetime.utcnow().isoformat(),
         )
     )

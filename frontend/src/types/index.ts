@@ -45,6 +45,15 @@ export interface StrengthBreakdown {
   overall: number
 }
 
+export interface SemanticMatch {
+  score: number
+  interpretation: string
+  embedding_dimensions: number
+  raw_similarity: number
+  keyword_score: number
+  score_difference: number
+}
+
 export interface AnalysisResult {
   analysis_id: string
   resume_id?: string
@@ -53,6 +62,7 @@ export interface AnalysisResult {
   rewritten_bullets: RewrittenBullet[]
   jd_intelligence?: JDIntelligence | null
   strength_breakdown?: StrengthBreakdown | null
+  semantic_match?: SemanticMatch | null
   resume_text?: string
   created_at: string
 }
