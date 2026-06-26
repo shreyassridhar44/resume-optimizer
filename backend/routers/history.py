@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Query, HTTPException, Depends
 from models.schemas import HistoryResponse, HistoryItem
 from services.storage import get_user_history, delete_analysis
 from core.logging_config import get_logger
+from core.auth import get_current_user
 
 router = APIRouter()
 logger = get_logger("history")
@@ -9,13 +10,17 @@ logger = get_logger("history")
 
 @router.get("/history", response_model=HistoryResponse)
 async def get_history(
-    user_id: str = Query(..., description="User ID from Supabase Auth"),
+    current_user: str = Depends(get_current_user),
     limit: int = Query(20, ge=1, le=100),
 ):
-    """Fetch analysis history for authenticated user."""
-    logger.info(f"Fetching history for user {user_id[:8]} (limit={limit})")
+    """
+    Fetch analysis history for authenticated user.
+    
+    🔒 Requires authentication
+    """
+    logger.info(f"Fetching history for user {current_user[:8]} (limit={limit})")
     try:
-        items_raw = await get_user_history(user_id, limit)
+        items_raw = await get_user_history(current_user, limit)
         
         items = []
         for row in items_raw:
@@ -42,12 +47,16 @@ async def get_history(
 @router.delete("/history/{analysis_id}")
 async def delete_history_item(
     analysis_id: str,
-    user_id: str = Query(...),
+    current_user: str = Depends(get_current_user),
 ):
-    """Delete a specific analysis by ID."""
-    logger.info(f"Deleting analysis {analysis_id[:8]} for user {user_id[:8]}")
+    """
+    Delete a specific analysis by ID.
+    
+    🔒 Requires authentication
+    """
+    logger.info(f"Deleting analysis {analysis_id[:8]} for user {current_user[:8]}")
     try:
-        success = await delete_analysis(analysis_id, user_id)
+        success = await delete_analysis(analysis_id, current_user)
         if not success:
             logger.warning(f"Analysis {analysis_id[:8]} not found or already deleted")
             raise HTTPException(status_code=404, detail="Analysis not found")

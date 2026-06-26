@@ -75,7 +75,7 @@ export default function UploadPage() {
     try {
       // Step 1: Upload
       setStep('uploading')
-      const uploaded = await uploadResume(file!, user.id)
+      const uploaded = await uploadResume(file!)
 
       // Step 2: Parsing (visual only — happens server-side during upload)
       setStep('parsing')
@@ -90,7 +90,6 @@ export default function UploadPage() {
       const result = await analyzeResume({
         resumeId: uploaded.resume_id,
         jobDescription: jd,
-        userId: user.id,
         roleType,
         persona,
       })

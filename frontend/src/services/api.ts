@@ -12,8 +12,23 @@ import type {
   EvolutionResponse,
   CompareResponse,
 } from '../types'
+import { supabase } from '../lib/supabase'
 
 const BASE_URL = import.meta.env.VITE_API_URL || '/api'
+
+// Helper to get auth headers with JWT token
+async function getAuthHeaders(): Promise<HeadersInit> {
+  const { data: { session } } = await supabase.auth.getSession()
+  
+  if (!session?.access_token) {
+    throw new Error('Not authenticated. Please log in.')
+  }
+  
+  return {
+    'Authorization': `Bearer ${session.access_token}`,
+    'Content-Type': 'application/json',
+  }
+}
 
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -31,16 +46,21 @@ async function handleResponse<T>(res: Response): Promise<T> {
 
 // ── Resume ────────────────────────────────────────────────────────────────────
 
-export async function uploadResume(
-  file: File,
-  userId: string
-): Promise<ResumeUploadResponse> {
+export async function uploadResume(file: File): Promise<ResumeUploadResponse> {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.access_token) {
+    throw new Error('Not authenticated')
+  }
+
   const fd = new FormData()
   fd.append('file', file)
-  fd.append('user_id', userId)
+  // user_id removed - backend gets it from JWT token
 
   const res = await fetch(`${BASE_URL}/upload-resume`, {
     method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+    },
     body: fd,
   })
   return handleResponse<ResumeUploadResponse>(res)
@@ -51,17 +71,18 @@ export async function uploadResume(
 export async function analyzeResume(params: {
   resumeId: string
   jobDescription: string
-  userId: string
   roleType: RoleType
   persona: PersonaType
 }): Promise<AnalysisResponse> {
+  const headers = await getAuthHeaders()
+
   const res = await fetch(`${BASE_URL}/analyze`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({
       resume_id: params.resumeId,
       job_description: params.jobDescription,
-      user_id: params.userId,
+      // user_id removed - comes from JWT token
       role_type: params.roleType,
       persona: params.persona,
     }),
@@ -69,13 +90,12 @@ export async function analyzeResume(params: {
   return handleResponse<AnalysisResponse>(res)
 }
 
-export async function getAnalysis(
-  analysisId: string,
-  userId: string
-): Promise<AnalysisResponse['data']> {
-  const res = await fetch(
-    `${BASE_URL}/analysis/${analysisId}?user_id=${userId}`
-  )
+export async function getAnalysis(analysisId: string): Promise<AnalysisResponse['data']> {
+  const headers = await getAuthHeaders()
+
+  const res = await fetch(`${BASE_URL}/analysis/${analysisId}`, {
+    headers,
+  })
   return handleResponse<AnalysisResponse['data']>(res)
 }
 
@@ -83,18 +103,19 @@ export async function getAnalysis(
 
 export async function generateCoverLetter(params: {
   analysisId: string
-  userId: string
   tone: CoverLetterTone
   applicantName?: string
   companyName?: string
   roleTitle?: string
 }): Promise<CoverLetterResponse> {
+  const headers = await getAuthHeaders()
+
   const res = await fetch(`${BASE_URL}/cover-letter`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({
       analysis_id: params.analysisId,
-      user_id: params.userId,
+      // user_id removed - comes from JWT token
       tone: params.tone,
       applicant_name: params.applicantName ?? '',
       company_name: params.companyName ?? '',
@@ -108,14 +129,15 @@ export async function generateCoverLetter(params: {
 
 export async function generateSkillGapRoadmap(params: {
   analysisId: string
-  userId: string
 }): Promise<SkillGapResponse> {
+  const headers = await getAuthHeaders()
+
   const res = await fetch(`${BASE_URL}/skill-gap`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({
       analysis_id: params.analysisId,
-      user_id: params.userId,
+      // user_id removed - comes from JWT token
     }),
   })
   return handleResponse<SkillGapResponse>(res)
@@ -158,47 +180,46 @@ export async function detectRedFlags(
 
 // ── Resume Evolution ──────────────────────────────────────────────────────────
 
-export async function getResumeEvolution(
-  resumeId: string,
-  userId: string
-): Promise<EvolutionResponse> {
-  const res = await fetch(
-    `${BASE_URL}/evolution/${resumeId}?user_id=${userId}`
-  )
+export async function getResumeEvolution(resumeId: string): Promise<EvolutionResponse> {
+  const headers = await getAuthHeaders()
+
+  const res = await fetch(`${BASE_URL}/evolution/${resumeId}`, {
+    headers,
+  })
   return handleResponse<EvolutionResponse>(res)
 }
 
 export async function compareVersions(
   v1: string,
-  v2: string,
-  userId: string
+  v2: string
 ): Promise<CompareResponse> {
+  const headers = await getAuthHeaders()
+
   const res = await fetch(
-    `${BASE_URL}/evolution/compare?v1=${v1}&v2=${v2}&user_id=${userId}`
+    `${BASE_URL}/evolution/compare?v1=${v1}&v2=${v2}`,
+    { headers }
   )
   return handleResponse<CompareResponse>(res)
 }
 
 // ── History ───────────────────────────────────────────────────────────────────
 
-export async function getUserHistory(
-  userId: string,
-  limit = 20
-): Promise<HistoryResponse> {
-  const res = await fetch(
-    `${BASE_URL}/history?user_id=${userId}&limit=${limit}`
-  )
+export async function getUserHistory(limit = 20): Promise<HistoryResponse> {
+  const headers = await getAuthHeaders()
+
+  const res = await fetch(`${BASE_URL}/history?limit=${limit}`, {
+    headers,
+  })
   return handleResponse<HistoryResponse>(res)
 }
 
-export async function deleteAnalysis(
-  analysisId: string,
-  userId: string
-): Promise<void> {
-  const res = await fetch(
-    `${BASE_URL}/history/${analysisId}?user_id=${userId}`,
-    { method: 'DELETE' }
-  )
+export async function deleteAnalysis(analysisId: string): Promise<void> {
+  const headers = await getAuthHeaders()
+
+  const res = await fetch(`${BASE_URL}/history/${analysisId}`, {
+    method: 'DELETE',
+    headers,
+  })
   return handleResponse<void>(res)
 }
 
@@ -206,15 +227,16 @@ export async function deleteAnalysis(
 
 export async function getAutoEditSuggestions(params: {
   analysisId: string
-  userId: string
   maxSuggestions?: number
 }): Promise<import('../types').AutoEditSuggestionsResponse> {
+  const headers = await getAuthHeaders()
+
   const res = await fetch(`${BASE_URL}/auto-edit-suggestions`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({
       analysis_id: params.analysisId,
-      user_id: params.userId,
+      // user_id removed - comes from JWT token
       max_suggestions: params.maxSuggestions ?? 10,
     }),
   })
@@ -226,17 +248,18 @@ export async function applyResumeEdits(params: {
   resumeText: string
   appliedSuggestions: import('../types').EditSuggestion[]
   format: 'pdf' | 'docx' | 'both'
-  userId: string
 }): Promise<import('../types').ApplyEditsResponse> {
+  const headers = await getAuthHeaders()
+
   const res = await fetch(`${BASE_URL}/apply-edits`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({
       analysis_id: params.analysisId,
       resume_text: params.resumeText,
       applied_suggestions: params.appliedSuggestions,
       format: params.format,
-      user_id: params.userId,
+      // user_id removed - comes from JWT token
     }),
   })
   return handleResponse<import('../types').ApplyEditsResponse>(res)

@@ -25,7 +25,7 @@ class ParsedResume(BaseModel):
 
 class JobDescriptionInput(BaseModel):
     content: str = Field(..., min_length=50, description="Full job description text")
-    user_id: str
+    # user_id removed - obtained from JWT token
 
 
 # ── Analysis ─────────────────────────────────────────────────────────────────
@@ -33,7 +33,7 @@ class JobDescriptionInput(BaseModel):
 class AnalyzeRequest(BaseModel):
     resume_id: str
     job_description: str
-    user_id: str
+    # user_id removed - obtained from JWT token
     role_type: Optional[str] = "general"  # sde | ml | analyst | general
     persona: Optional[str] = "standard"  # standard | faang | startup | hr
 
@@ -152,7 +152,7 @@ class LiveFeedbackResponse(BaseModel):
 
 class CoverLetterRequest(BaseModel):
     analysis_id: str
-    user_id: str
+    # user_id removed - obtained from JWT token
     tone: Optional[str] = "professional"  # professional | enthusiastic | concise
     applicant_name: Optional[str] = ""
     company_name: Optional[str] = ""
@@ -168,7 +168,7 @@ class CoverLetterResponse(BaseModel):
 
 class SkillGapRequest(BaseModel):
     analysis_id: str
-    user_id: str
+    # user_id removed - obtained from JWT token
 
 
 class SkillGapItem(BaseModel):
@@ -240,7 +240,7 @@ class EvolutionResponse(BaseModel):
 class VersionCompareRequest(BaseModel):
     version1_id: str
     version2_id: str
-    user_id: str
+    # user_id removed - obtained from JWT token
 
 
 class VersionComparison(BaseModel):
@@ -298,7 +298,7 @@ class EditSuggestion(BaseModel):
 
 class AutoEditSuggestionsRequest(BaseModel):
     analysis_id: str
-    user_id: str
+    # user_id removed - obtained from JWT token
     max_suggestions: Optional[int] = 10
 
 
@@ -313,7 +313,7 @@ class ApplyEditsRequest(BaseModel):
     resume_text: str
     applied_suggestions: List[EditSuggestion]
     format: str = "both"  # pdf | docx | both
-    user_id: str
+    # user_id removed - obtained from JWT token
 
 
 class GeneratedResumeFile(BaseModel):

@@ -27,7 +27,7 @@ export default function HistoryPage() {
 
   useEffect(() => {
     if (!user) return
-    getUserHistory(user.id)
+    getUserHistory()
       .then(r => setItems(r.items))
       .catch(console.error)
       .finally(() => setLoading(false))
@@ -37,7 +37,7 @@ export default function HistoryPage() {
     if (!user) return
     setDeletingId(analysisId)
     try {
-      await deleteAnalysis(analysisId, user.id)
+      await deleteAnalysis(analysisId)
       setItems(prev => prev.filter(i => i.analysis_id !== analysisId))
     } catch (err) {
       console.error('Delete failed:', err)

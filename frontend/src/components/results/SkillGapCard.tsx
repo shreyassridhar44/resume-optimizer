@@ -91,7 +91,7 @@ export default function SkillGapCard({ analysisId }: { analysisId: string }) {
     setLoading(true)
     setError('')
     try {
-      const res = await generateSkillGapRoadmap({ analysisId, userId: user.id })
+      const res = await generateSkillGapRoadmap({ analysisId })
       setRoadmap(res.roadmap)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to generate roadmap.')

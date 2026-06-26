@@ -30,7 +30,6 @@ export default function CoverLetterCard({ analysisId }: { analysisId: string }) 
     try {
       const res = await generateCoverLetter({
         analysisId,
-        userId: user.id,
         tone,
         applicantName: applicantName.trim(),
         companyName: companyName.trim(),

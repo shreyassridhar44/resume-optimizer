@@ -1,5 +1,5 @@
 import asyncio
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
 from models.schemas import (
     AnalyzeRequest, AnalysisResponse, AnalysisResult,
     RewriteRequest, RewriteResponse,
@@ -20,6 +20,7 @@ from services.storage import get_resume_text, save_analysis, get_analysis_by_id
 from core.security import validate_text_length
 from core.logging_config import get_logger
 from core.rate_limiter import limiter, get_rate_limit
+from core.auth import get_current_user
 from datetime import datetime
 
 router = APIRouter()
@@ -28,7 +29,11 @@ logger = get_logger("analysis")
 
 @router.post("/analyze", response_model=AnalysisResponse)
 @limiter.limit(get_rate_limit("ai_heavy"))
-async def analyze_resume(request: Request, req: AnalyzeRequest):
+async def analyze_resume(
+    request: Request,
+    req: AnalyzeRequest,
+    current_user: str = Depends(get_current_user),
+):
     """
     Full analysis pipeline:
     1. Fetch resume text
@@ -37,17 +42,18 @@ async def analyze_resume(request: Request, req: AnalyzeRequest):
     4. Rewrite bullet points (LLM)
     5. Store and return results
     
-    Rate Limited: 10 analyses per hour per IP
+    🔒 Requires authentication: JWT token in Authorization header
+    Rate Limited: 8 analyses per hour per IP
     """
-    logger.info(f"Analysis started for resume {req.resume_id[:8]} by user {req.user_id[:8]}")
+    logger.info(f"Analysis started for resume {req.resume_id[:8]} by user {current_user[:8]}")
     
     try:
         # Validate JD length
         validate_text_length(req.job_description, 10000, "Job description")
         
-        # Fetch resume text
+        # Fetch resume text - validates ownership
         logger.info("Fetching resume text...")
-        resume_text = await get_resume_text(req.resume_id, req.user_id)
+        resume_text = await get_resume_text(req.resume_id, current_user)
         
         # Parse for bullet points
         parsed = parse_resume_sections(resume_text)
@@ -101,7 +107,7 @@ async def analyze_resume(request: Request, req: AnalyzeRequest):
         # Save to DB
         logger.info("Saving analysis to database...")
         analysis_id = await save_analysis(
-            user_id=req.user_id,
+            user_id=current_user,
             resume_id=req.resume_id,
             jd_content=req.job_description,
             ats_score=ats_result.score,
@@ -164,15 +170,21 @@ async def live_feedback(req: LiveFeedbackRequest):
 
 @router.post("/cover-letter", response_model=CoverLetterResponse)
 @limiter.limit(get_rate_limit("ai_medium"))
-async def create_cover_letter(request: Request, req: CoverLetterRequest):
+async def create_cover_letter(
+    request: Request,
+    req: CoverLetterRequest,
+    current_user: str = Depends(get_current_user),
+):
     """
     Generate a tailored cover letter from a stored analysis.
-    Rate Limited: 20 generations per hour per IP
+    
+    🔒 Requires authentication
+    Rate Limited: 15 generations per hour per IP
     """
     logger.info(f"Cover letter generation started for analysis {req.analysis_id[:8]}")
     
     try:
-        result = await get_analysis_by_id(req.analysis_id, req.user_id)
+        result = await get_analysis_by_id(req.analysis_id, current_user)
         if not result:
             raise HTTPException(status_code=404, detail="Analysis not found")
 
@@ -211,15 +223,21 @@ async def create_cover_letter(request: Request, req: CoverLetterRequest):
 
 @router.post("/skill-gap", response_model=SkillGapResponse)
 @limiter.limit(get_rate_limit("ai_medium"))
-async def create_skill_gap_roadmap(request: Request, req: SkillGapRequest):
+async def create_skill_gap_roadmap(
+    request: Request,
+    req: SkillGapRequest,
+    current_user: str = Depends(get_current_user),
+):
     """
     Generate a skill-gap learning roadmap from a stored analysis.
-    Rate Limited: 20 generations per hour per IP
+    
+    🔒 Requires authentication
+    Rate Limited: 15 generations per hour per IP
     """
     logger.info(f"Skill gap roadmap generation started for analysis {req.analysis_id[:8]}")
     
     try:
-        result = await get_analysis_by_id(req.analysis_id, req.user_id)
+        result = await get_analysis_by_id(req.analysis_id, current_user)
         if not result:
             raise HTTPException(status_code=404, detail="Analysis not found")
 
@@ -261,9 +279,16 @@ async def create_skill_gap_roadmap(request: Request, req: SkillGapRequest):
 
 
 @router.get("/analysis/{analysis_id}")
-async def get_analysis(analysis_id: str, user_id: str):
-    """Fetch a specific analysis by ID."""
-    result = await get_analysis_by_id(analysis_id, user_id)
+async def get_analysis(
+    analysis_id: str,
+    current_user: str = Depends(get_current_user),
+):
+    """
+    Fetch a specific analysis by ID.
+    
+    🔒 Requires authentication
+    """
+    result = await get_analysis_by_id(analysis_id, current_user)
     if not result:
         raise HTTPException(status_code=404, detail="Analysis not found")
     

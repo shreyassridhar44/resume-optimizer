@@ -97,7 +97,7 @@ export default function ResultsPage() {
   useEffect(() => {
     if (!data && analysisId && user) {
       setLoading(true)
-      getAnalysis(analysisId, user.id)
+      getAnalysis(analysisId)
         .then((result) => {
           setData(result)
           // Fetch resume text if available

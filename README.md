@@ -553,6 +553,12 @@ Additional documentation files are available in the [`docs/`](./docs) directory:
 | **[Quick Reference Guide](./docs/QUICK_REFERENCE.md)** | Quick setup commands, rate limits, key file locations, troubleshooting tips, and common tasks for development and deployment |
 | **[Security & Logging Guide](./docs/SECURITY_AND_LOGGING.md)** | Comprehensive overview of security features (rate limiting, throttling, input validation), structured logging system, error handling, and production deployment checklist |
 | **[Groq API & Rate Limiting](./docs/GROQ_API_RATE_LIMITING.md)** | Complete guide to Groq LLM integration, rate limiting implementation, throttling system, how they work together, monitoring metrics, and troubleshooting |
+| **[Authentication Audit](./docs/AUTHENTICATION_AUDIT.md)** | ⚠️ **CRITICAL** - Security audit revealing authentication and authorization vulnerabilities that must be fixed before production |
+| **[Auth Implementation Guide](./docs/AUTH_IMPLEMENTATION_GUIDE.md)** | Step-by-step guide to implement proper JWT-based authentication and authorization (partially completed, needs router integration) |
+
+### ⚠️ Security Notice
+
+**IMPORTANT**: The application currently has authentication implemented on the frontend but NOT properly enforced on the backend. Review the [Authentication Audit](./docs/AUTHENTICATION_AUDIT.md) and follow the [Implementation Guide](./docs/AUTH_IMPLEMENTATION_GUIDE.md) before deploying to production.
 
 These guides complement the main README by providing operational details for developers and system administrators.
 

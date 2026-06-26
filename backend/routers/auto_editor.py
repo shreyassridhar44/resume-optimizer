@@ -3,7 +3,7 @@ Auto-Editor router: AI-powered resume editing using LaTeX.
 LaTeX preserves ALL formatting perfectly!
 """
 import uuid
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
 from models.schemas import (
     AutoEditSuggestionsRequest,
     AutoEditSuggestionsResponse,
@@ -19,6 +19,7 @@ from core.supabase import get_supabase
 from core.config import settings
 from core.rate_limiter import limiter, get_rate_limit
 from core.logging_config import get_logger
+from core.auth import get_current_user
 
 router = APIRouter(prefix="/api", tags=["auto-editor"])
 logger = get_logger("auto_editor")
@@ -26,15 +27,21 @@ logger = get_logger("auto_editor")
 
 @router.post("/auto-edit-suggestions", response_model=AutoEditSuggestionsResponse)
 @limiter.limit(get_rate_limit("ai_light"))
-async def get_auto_edit_suggestions(request: Request, req: AutoEditSuggestionsRequest):
+async def get_auto_edit_suggestions(
+    request: Request,
+    req: AutoEditSuggestionsRequest,
+    current_user: str = Depends(get_current_user),
+):
     """
     Generate AI-powered edit suggestions for a resume based on its analysis.
+    
+    🔒 Requires authentication
     Rate Limited: 20 requests per hour per IP
     """
     logger.info(f"Auto-edit suggestions requested for analysis {req.analysis_id[:8]}")
     try:
-        # Fetch the analysis
-        analysis = await get_analysis_by_id(req.analysis_id, req.user_id)
+        # Fetch the analysis - validates ownership
+        analysis = await get_analysis_by_id(req.analysis_id, current_user)
         if not analysis:
             raise HTTPException(status_code=404, detail="Analysis not found")
         
@@ -92,18 +99,24 @@ async def get_auto_edit_suggestions(request: Request, req: AutoEditSuggestionsRe
 
 @router.post("/apply-edits", response_model=ApplyEditsResponse)
 @limiter.limit(get_rate_limit("ai_light"))
-async def apply_resume_edits(request: Request, req: ApplyEditsRequest):
+async def apply_resume_edits(
+    request: Request,
+    req: ApplyEditsRequest,
+    current_user: str = Depends(get_current_user),
+):
     """
     Apply selected edit suggestions using LaTeX for perfect formatting preservation.
     Uses the original LaTeX code stored in the database.
+    
+    🔒 Requires authentication
     Rate Limited: 20 requests per hour per IP
     """
     logger.info(f"Applying {len(req.applied_suggestions)} edits for analysis {req.analysis_id[:8]}")
     try:
         print(f"⏳ Applying {len(req.applied_suggestions)} edits...")
         
-        # Fetch the analysis to get the original LaTeX code
-        analysis = await get_analysis_by_id(req.analysis_id, req.user_id)
+        # Fetch the analysis to get the original LaTeX code - validates ownership
+        analysis = await get_analysis_by_id(req.analysis_id, current_user)
         if not analysis:
             raise HTTPException(status_code=404, detail="Analysis not found")
         
@@ -134,7 +147,7 @@ async def apply_resume_edits(request: Request, req: ApplyEditsRequest):
                 docx_bytes = await latex_to_docx_simple(edited_latex)
                 
                 # Upload to Supabase Storage
-                docx_path = f"{req.user_id}/edited/{uuid.uuid4()}_resume_optimized.docx"
+                docx_path = f"{current_user}/edited/{uuid.uuid4()}_resume_optimized.docx"
                 
                 supabase.storage.from_(settings.SUPABASE_BUCKET).upload(
                     docx_path,
@@ -164,7 +177,7 @@ async def apply_resume_edits(request: Request, req: ApplyEditsRequest):
                 pdf_bytes = await latex_to_pdf(edited_latex)
                 
                 # Upload PDF
-                pdf_path = f"{req.user_id}/edited/{uuid.uuid4()}_resume_optimized.pdf"
+                pdf_path = f"{current_user}/edited/{uuid.uuid4()}_resume_optimized.pdf"
                 
                 supabase.storage.from_(settings.SUPABASE_BUCKET).upload(
                     pdf_path,
@@ -192,7 +205,7 @@ async def apply_resume_edits(request: Request, req: ApplyEditsRequest):
                     latex_bytes = edited_latex.encode('utf-8')
                     
                     # Upload LaTeX source
-                    latex_path = f"{req.user_id}/edited/{uuid.uuid4()}_resume_optimized.tex"
+                    latex_path = f"{current_user}/edited/{uuid.uuid4()}_resume_optimized.tex"
                     
                     supabase.storage.from_(settings.SUPABASE_BUCKET).upload(
                         latex_path,

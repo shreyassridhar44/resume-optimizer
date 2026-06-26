@@ -48,7 +48,6 @@ export default function AutoEditorCard({ analysisId, resumeText }: Props) {
     try {
       const response = await getAutoEditSuggestions({
         analysisId,
-        userId: user.id,
         maxSuggestions: 10,
       })
       setSuggestions(response.suggestions)
@@ -87,7 +86,6 @@ export default function AutoEditorCard({ analysisId, resumeText }: Props) {
         resumeText,
         appliedSuggestions: selectedSugs,
         format,
-        userId: user.id,
       })
       setResult(response)
     } catch (err) {
