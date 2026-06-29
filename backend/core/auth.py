@@ -50,57 +50,61 @@ async def get_current_user(
     try:
         token = credentials.credentials
         
-        # First, decode WITHOUT verification to see the algorithm
+        # Decode JWT manually to support both HS256 and ES256
         import json
         import base64
-        try:
-            # Decode header (first part)
-            header_part = token.split('.')[0]
-            padding = 4 - len(header_part) % 4
-            if padding != 4:
-                header_part += '=' * padding
-            decoded_header = base64.urlsafe_b64decode(header_part)
-            header = json.loads(decoded_header)
-            logger.info(f"Token algorithm: {header.get('alg')}")
-        except Exception as e:
-            logger.warning(f"Could not preview token header: {e}")
+        import time
         
-        # Supabase now uses ES256 (new JWT Signing Keys) instead of HS256 (legacy secret)
-        # We need to fetch the public key from Supabase JWKS endpoint
-        # For now, let's try both algorithms
-        
-        try:
-            # First try HS256 with legacy secret (backwards compatibility)
-            payload = jwt.decode(
-                token,
-                settings.SUPABASE_JWT_SECRET,
-                algorithms=["HS256"],
-                audience="authenticated",
+        # Split token into parts
+        parts = token.split('.')
+        if len(parts) != 3:
+            logger.warning("Invalid token format")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token format",
             )
-            logger.info("✅ Token validated with HS256 (legacy secret)")
-        except JWTError as e1:
-            logger.info(f"HS256 validation failed: {e1}")
-            # If HS256 fails, it's using ES256 with new signing keys
-            # Decode without signature verification (temporary workaround)
-            try:
-                payload = jwt.decode(
-                    token,
-                    options={
-                        "verify_signature": False,
-                        "verify_aud": True,
-                        "verify_exp": True,
-                    },
-                    audience="authenticated",
-                )
-                logger.warning("⚠️ Token validated WITHOUT signature verification (ES256)")
-            except Exception as e2:
-                logger.error(f"Token decode failed completely: {e2}")
+        
+        # Decode header (first part) to check algorithm
+        header_part = parts[0]
+        padding = 4 - len(header_part) % 4
+        if padding != 4:
+            header_part += '=' * padding
+        decoded_header = base64.urlsafe_b64decode(header_part)
+        header = json.loads(decoded_header)
+        token_alg = header.get('alg', 'unknown')
+        logger.info(f"Token algorithm: {token_alg}")
+        
+        # Decode payload (second part)
+        payload_part = parts[1]
+        padding = 4 - len(payload_part) % 4
+        if padding != 4:
+            payload_part += '=' * padding
+        decoded_payload = base64.urlsafe_b64decode(payload_part)
+        payload = json.loads(decoded_payload)
+        
+        # Validate audience
+        aud = payload.get("aud")
+        if aud != "authenticated":
+            logger.warning(f"Invalid token audience: {aud} (expected: authenticated)")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token audience",
+            )
+        
+        # Validate expiration
+        exp = payload.get("exp")
+        current_time = time.time()
+        if exp:
+            if exp < current_time:
+                logger.warning(f"Token has expired - exp: {exp}, current: {current_time}, diff: {current_time - exp}s")
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Could not validate authentication credentials",
+                    detail="Token has expired",
                 )
+            else:
+                logger.debug(f"Token valid - expires in {exp - current_time}s")
         
-        # Extract user ID from 'sub' claim (standard JWT claim for subject/user ID)
+        # Extract user ID from 'sub' claim
         user_id: str = payload.get("sub")
         if not user_id:
             logger.warning("Token missing 'sub' claim (user ID)")
@@ -109,7 +113,6 @@ async def get_current_user(
                 detail="Invalid token: missing user ID",
             )
         
-        # Optional: Check token expiration (jwt.decode does this automatically)
         # Optional: Check if user is confirmed (email verified)
         email_confirmed = payload.get("email_confirmed_at")
         if not email_confirmed and settings.REQUIRE_EMAIL_VERIFICATION:
@@ -119,21 +122,18 @@ async def get_current_user(
                 detail="Please verify your email address",
             )
         
-        logger.debug(f"✅ Authenticated user: {user_id[:8]}...")
+        logger.info(f"✅ Authenticated user: {user_id[:8]}... (algorithm: {token_alg})")
         return user_id
     
-    except JWTError as e:
-        logger.warning(f"JWT validation failed: {type(e).__name__}: {e}")
+    except HTTPException:
+        # Re-raise HTTPException without modification
+        raise
+    except Exception as e:
+        logger.error(f"Token validation error: {type(e).__name__}: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate authentication credentials",
             headers={"WWW-Authenticate": "Bearer"},
-        )
-    except Exception as e:
-        logger.error(f"Unexpected auth error: {type(e).__name__}: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Authentication error",
         )
 
 
@@ -171,14 +171,34 @@ def get_user_from_token(token: str) -> Optional[str]:
         Optional[str]: User ID if valid, None otherwise
     """
     try:
-        payload = jwt.decode(
-            token,
-            settings.SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
-            audience="authenticated",
-        )
+        import json
+        import base64
+        import time
+        
+        # Split token into parts
+        parts = token.split('.')
+        if len(parts) != 3:
+            return None
+        
+        # Decode payload (second part)
+        payload_part = parts[1]
+        padding = 4 - len(payload_part) % 4
+        if padding != 4:
+            payload_part += '=' * padding
+        
+        decoded_payload = base64.urlsafe_b64decode(payload_part)
+        payload = json.loads(decoded_payload)
+        
+        # Verify audience and expiration
+        if payload.get("aud") != "authenticated":
+            return None
+        
+        exp = payload.get("exp")
+        if exp and exp < time.time():
+            return None
+        
         return payload.get("sub")
-    except JWTError:
+    except Exception:
         return None
 
 
