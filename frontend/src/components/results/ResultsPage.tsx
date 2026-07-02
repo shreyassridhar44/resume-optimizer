@@ -14,7 +14,7 @@ import SemanticMatchCard from './SemanticMatchCard'
 import AutoEditorCard from './AutoEditorCard'
 import { downloadAnalysisPDF } from '../../services/pdfExport'
 import {
-  Lightbulb, ArrowLeft,
+  CheckCircle2, XCircle, Lightbulb, ArrowLeft, Sparkles,
   TrendingUp, AlertTriangle, ChevronDown, ChevronUp,
   Download,
 } from 'lucide-react'
